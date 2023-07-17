@@ -28,6 +28,8 @@ void cg::renderer::dx12_renderer::init()
 	camera->set_z_near(settings->camera_z_near);
 	camera->set_z_far(settings->camera_z_far);
 
+	view_port = CD3DX12_VIEWPORT(0.f,0.f, static_cast<float>(settings->width), static_cast<float>(settings->height));
+	scissor_rect = CD3DX12_RECT(0.f,0.f, static_cast<long>(settings->width), static_cast<long>(settings->height));
 	load_pipeline();
 	load_assets();
 }
@@ -40,7 +42,13 @@ void cg::renderer::dx12_renderer::destroy()
 
 void cg::renderer::dx12_renderer::update()
 {
-	// TODO Lab: 3.08 Implement `update` method of `dx12_renderer`
+	auto now = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> duration = now - current_time;
+	frame_duration = duration.count();
+	current_time = now;
+
+	cb.mwpMatrix = camera->get_dxm_mvp_matrix();
+	memcpy(constant_buffer_data_begin, &cb, sizeof(cb));
 }
 
 void cg::renderer::dx12_renderer::render()
@@ -74,7 +82,7 @@ ComPtr<IDXGIFactory4> cg::renderer::dx12_renderer::get_dxgi_factory()
 void cg::renderer::dx12_renderer::initialize_device(ComPtr<IDXGIFactory4>& dxgi_factory)
 {
 	ComPtr<IDXGIAdapter1> hardware_adapter;
-	dxgi_factory->EnumAdapters1(0,&hardware_adapter);
+	dxgi_factory->EnumAdapters1(1,&hardware_adapter);
 #ifdef _DEBUG
 	DXGI_ADAPTER_DESC adapter_desc{};
 	hardware_adapter->GetDesc(&adapter_desc);
@@ -353,7 +361,7 @@ D3D12_INDEX_BUFFER_VIEW cg::renderer::dx12_renderer::create_index_buffer_view(co
 	view.BufferLocation = index_buffer->GetGPUVirtualAddress();
 	view.SizeInBytes = index_buffer_size;
 	view.Format = DXGI_FORMAT_R32_UINT;
-	return {};
+	return view;
 }
 
 void cg::renderer::dx12_renderer::create_shader_resource_view(const ComPtr<ID3D12Resource>& texture, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handler)
@@ -471,7 +479,7 @@ void cg::renderer::dx12_renderer::load_assets()
 void cg::renderer::dx12_renderer::populate_command_list()
 {
 	// Reset
-	THROW_IF_FAILED(command_allocators[frame_index].Reset());
+	THROW_IF_FAILED(command_allocators[frame_index]->Reset());
 	THROW_IF_FAILED(command_list->Reset(
 			command_allocators[frame_index].Get(),
 			pipeline_state.Get()));

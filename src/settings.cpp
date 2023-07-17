@@ -26,6 +26,8 @@ std::shared_ptr<settings> cg::settings::parse_settings(int argc, char** argv)
 	add_options("raytracing_depth", "Maximum number of traces rays", cxxopts::value<unsigned>()->default_value("1"));
 	add_options("accumulation_num", "Number of accumulated frames", cxxopts::value<unsigned>()->default_value("1"));
 	add_options("h,help", "Print usage");
+	//Mode for showing edges of polygon
+	add_options("show_edges", "Mode for showing edges of polygon", cxxopts::value<bool>()->default_value("true"));
 
 	auto result = options.parse(argc, argv);
 
@@ -46,6 +48,6 @@ std::shared_ptr<settings> cg::settings::parse_settings(int argc, char** argv)
 	settings->result_path = result["result_path"].as<std::filesystem::path>();
 	settings->raytracing_depth = result["raytracing_depth"].as<unsigned>();
 	settings->accumulation_num = result["accumulation_num"].as<unsigned>();
-
+	settings->show_edges = result["show_edges"].as<bool>();
 	return settings;
 }
